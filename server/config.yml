@@ -1,0 +1,4 @@
+port: 1026
+control:
+  - action: a1
+  - action: a2
