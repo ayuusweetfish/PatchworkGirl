@@ -10,8 +10,14 @@
 <p class='agent-id'></p>
 <button class='btn-action-a1'>Action - a1</button>
 <button class='btn-action-a2'>Action - a2</button>
-<p>s1 = <span class='slider-disp-s1'></span></p>
-<p>s2 = <span class='slider-disp-s2'></span></p>
+<p>
+  <input type='range' min='-5' max='5' value='-5' class='slider-input-s1'></input>
+  s1 = <span class='slider-disp-s1'></span>
+</p>
+<p>
+  <input type='range' min='0' max='1' value='0' class='slider-input-s2'></input>
+  s2 = <span class='slider-disp-s2'></span>
+</p>
 </div>
 
 <script>
@@ -44,12 +50,18 @@ const reconnect = () => {
         });
       }
       for (const [key, val] of Object.entries(o.values)) {
+        const input = agentDiv.querySelector(`.slider-input-${key}`)
+        input.value = val;
         agentDiv.querySelector(`.slider-disp-${key}`).innerText = val.toString();
+        input.addEventListener('input', () => {
+          send({ type: 'set', id: o.id, ts: Date.now(), key, val: input.value });
+        });
       }
     } else if (o.type === 'agent-off') {
       document.getElementById('agent-div-' + o.id).remove();
     } else if (o.type === 'agent-upd') {
       const agentDiv = document.getElementById('agent-div-' + o.id)
+      agentDiv.querySelector(`.slider-input-${o.key}`).value = o.val;
       agentDiv.querySelector(`.slider-disp-${o.key}`).innerText = o.val.toString();
     }
   };
