@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><head>
+  <title>Patchwork</title>
+</head><body>
+
+<script>
+(async () => {
+let socket;
+const reconnect = () => {
+  socket = new WebSocket('ws://localhost:1026/admin');
+  socket.onopen = () => {
+  };
+  socket.onclose = () => setTimeout(() => reconnect(), 1000);
+  socket.onmessage = (e) => {
+    console.log(e.data);
+  };
+};
+reconnect();
+})();
+</script>
+
+</body></html>
