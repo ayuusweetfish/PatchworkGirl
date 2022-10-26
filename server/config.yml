@@ -2,3 +2,5 @@ port: 1026
 control:
   - action: a1
   - action: a2
+  - slider: [s1, -5, 5]
+  - slider: [s2, 0, 1]

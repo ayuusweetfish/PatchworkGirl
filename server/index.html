@@ -3,16 +3,55 @@
   <title>Patchwork</title>
 </head><body>
 
+<div id='agents-container'>
+</div>
+
+<div id='agent-template' style='display: none'>
+<p class='agent-id'></p>
+<button class='btn-action-a1'>Action - a1</button>
+<button class='btn-action-a2'>Action - a2</button>
+<p>s1 = <span class='slider-disp-s1'></span></p>
+<p>s2 = <span class='slider-disp-s2'></span></p>
+</div>
+
 <script>
 (async () => {
+const agentsContainer = document.getElementById('agents-container');
+const templ = document.getElementById('agent-template');
+
 let socket;
 const reconnect = () => {
   socket = new WebSocket('ws://localhost:1026/admin');
+  const send = (o) => socket.send(JSON.stringify(o));
   socket.onopen = () => {
   };
-  socket.onclose = () => setTimeout(() => reconnect(), 1000);
+  socket.onclose = () => {
+    agentsContainer.innerHTML = '';
+    setTimeout(() => reconnect(), 1000);
+  };
   socket.onmessage = (e) => {
-    console.log(e.data);
+    const o = JSON.parse(e.data);
+    console.log(o);
+    if (o.type === 'agent-on') {
+      const agentDiv = templ.cloneNode(true);
+      agentDiv.id = 'agent-div-' + o.id;
+      agentDiv.style.removeProperty('display');
+      agentsContainer.appendChild(agentDiv);
+      agentDiv.querySelector('.agent-id').innerText = o.id;
+      for (const action of ['a1', 'a2']) {
+        agentDiv.querySelector(`.btn-action-${action}`).addEventListener('click', (e) => {
+          send({ type: 'act', id: o.id, ts: Date.now(), name: action });
+        });
+      }
+      for (const [key, val] of Object.entries(o.values)) {
+        agentDiv.querySelector(`.slider-disp-${key}`).innerText = val.toString();
+      }
+    } else if (o.type === 'agent-off') {
+      document.getElementById('agent-div-' + o.id).remove();
+    } else if (o.type === 'agent-upd') {
+      const agentDiv = document.getElementById('agent-div-' + o.id)
+      agentDiv.querySelector(`.slider-disp-${o.key}`).innerText = o.val.toString();
+    }
   };
 };
 reconnect();
