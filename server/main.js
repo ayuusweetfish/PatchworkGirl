@@ -27,15 +27,15 @@ const serveReq = async (req) => {
     const { socket, response } = Deno.upgradeWebSocket(req)
     const path = (new URL(req.url)).pathname
     const isAdmin = (path === '/admin')
-    const clientId = `A-${crypto.randomUUID()}`
+    const clientId = crypto.randomUUID()
     const send = (o) => socket.send(JSON.stringify(o))
     if (isAdmin) {
       socket.onopen = () => {
         log('Admin connected')
         send({ type: 'id', id: clientId })
         socketsAdmin[clientId] = socket
-        for (const [agentClientId, { elements }] of Object.entries(socketsAgent))
-          send({ type: 'agent-on', id: agentClientId, elements })
+        for (const [agentClientId, { disp, elements }] of Object.entries(socketsAgent))
+          send({ type: 'agent-on', id: agentClientId, disp, elements })
       }
       socket.onclose = () => {
         delete socketsAdmin[clientId]
@@ -72,6 +72,7 @@ const serveReq = async (req) => {
       socket.onmessage = (e) => {
         const o = JSON.parse(e.data)
         if (o.type === 'intro') {
+          const disp = o.disp
           for (const el of o.elements) {
             elementsIdx[el.name] = elements.length
             if (el.type === 'action') {
@@ -82,8 +83,8 @@ const serveReq = async (req) => {
             }
           }
           initialized = true;
-          adminBroadcast({ type: 'agent-on', id: clientId, elements })
-          socketsAgent[clientId] = { socket, elements }
+          adminBroadcast({ type: 'agent-on', id: clientId, disp, elements })
+          socketsAgent[clientId] = { socket, disp, elements }
         } else if (o.type === 'done') {
           adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
         } else if (o.type === 'upd') {
@@ -96,6 +97,7 @@ const serveReq = async (req) => {
     }
     return response
   } else {
+    const indexHtml = await Deno.readTextFile('index.html')
     return new Response(indexHtml, {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })

@@ -6,25 +6,96 @@
 <div id='agents-container'>
 </div>
 
-<div id='action-template' style='display: none'>
+<div id='action-template' class='action-container' style='display: none'>
   <button class='action-btn'></button>
   <span class='action-prog'></span>
 </div>
-<div id='slider-template' style='display: none'>
+<div id='slider-template' class='slider-container' style='display: none'>
   <input type='range' class='slider-input'></input>
-  <span class='slider-name'></span> = <span class='slider-disp'></span>
-  <span class='slider-prog'></span>
+  <div class='slider-text'>
+    <span class='slider-name'></span> = <span class='slider-disp'></span>
+    <span class='slider-prog'></span>
+  </div>
 </div>
 
-<div id='agent-template' style='display: none'>
-  <p class='agent-id'></p>
+<div id='agent-template' class='agent-container' style='display: none'>
+  <div class='agent-aux-info'>
+    <div class='agent-conn-at'></div>
+  </div>
+  <div class='agent-disp'></div>
 </div>
 
 <style>
-.prog-pend::before {
+#agents-container {
+  min-height: 100%;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 80vh;
+  position: relative;
+}
+
+.agent-container {
+  width: 100%;
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 12px 18px 3px 18px;
+  margin: 18px 0;
+}
+.agent-disp {
+  margin: 0 0 12px 0;
+  font-size: 1.5em;
+}
+.agent-aux-info {
+  margin: 0;
+  display: inline-block;
+  float: right;
+  color: #aaa;
+}
+.agent-aux-info div {
+  display: inline-block;
+}
+
+.action-container {
+  margin: 0 0 9px 0;
+}
+.action-container button {
+  border: 1px solid black;
+  border-radius: 4px;
+  background: #eee;
+  padding: 6px 0;
+  min-width: 50%;
+  font-size: 1rem;
+  transition: background 0.1s ease;
+}
+.action-container button:hover {
+  background: #ddd;
+}
+.action-container button:focus {
+  background: #ccc;
+}
+
+.slider-container {
+  margin: 0 0 9px 0;
+  width: 100%;
+  display: flex;
+}
+.slider-input {
+  margin: 0;
+  width: 50%;
+  height: 28px;
+  flex: 1 1 50%;
+}
+.slider-text {
+  display: inline-block;
+  margin-left: 9px;
+  height: 28px;
+  flex: 1 1 50%;
+}
+
+.prog-pend:before {
   content: 'pend';
 }
-.prog-done::before {
+.prog-done:before {
   content: 'done';
 }
 </style>
@@ -41,12 +112,13 @@ let socket
 
 const send = (o) => socket.send(JSON.stringify(o))
 
-const createAgent = (id, elements) => {
+const createAgent = ({ id, disp, elements }) => {
   const agentDiv = templ.cloneNode(true)
   agentDiv.id = 'agent-div-' + id
   agentDiv.style.removeProperty('display')
   agentsContainer.appendChild(agentDiv)
-  agentDiv.querySelector('.agent-id').innerText = id
+  agentDiv.querySelector('.agent-disp').innerText = disp
+  agentDiv.querySelector('.agent-conn-at').innerText = (new Date()).toLocaleString()
 
   const actionBtn = {}
   const actionProg = {}
@@ -183,7 +255,7 @@ const reconnect = () => {
     const o = JSON.parse(e.data)
     console.log(o)
     if (o.type === 'agent-on') {
-      agents[o.id] = createAgent(o.id, o.elements)
+      agents[o.id] = createAgent(o)
     } else if (o.type === 'agent-off') {
       agents[o.id].destroy()
       delete agents[o.id]
