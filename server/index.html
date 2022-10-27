@@ -6,15 +6,23 @@
 <div id='agents-container'>
 </div>
 
-<div id='action-template' class='action-container' style='display: none'>
-  <button class='action-btn'></button>
-  <span class='action-prog'></span>
+<div id='action-template' class='element-container action-container' style='display: none'>
+  <div class='left-container'></div>
+  <button class='cen-element action-btn'></button>
+  <div class='right-container'>
+    <span class='action-prog'></span>
+  </div>
 </div>
-<div id='slider-template' class='slider-container' style='display: none'>
-  <input type='range' class='slider-input'></input>
-  <div class='slider-text'>
-    <span class='slider-name'></span> = <span class='slider-disp'></span>
-    <span class='slider-prog'></span>
+<div id='slider-template' class='element-container slider-container' style='display: none'>
+  <div class='left-container'>
+    <span class='slider-name'></span>
+  </div>
+  <input type='range' class='cen-element slider-input'></input>
+  <div class='right-container'>
+    <span class='slider-val-container'>
+      <span class='slider-val'></span>
+      <span class='slider-prog'></span>
+    </span>
   </div>
 </div>
 
@@ -26,6 +34,14 @@
 </div>
 
 <style>
+body {
+  background: #f9f9f9;
+}
+
+* {
+  font-family: 'Source Sans Pro', sans-serif;
+}
+
 #agents-container {
   min-height: 100%;
   margin: 0 auto;
@@ -35,10 +51,11 @@
 }
 
 .agent-container {
+  background: #fff;
   width: 100%;
-  border: 1px solid black;
   border-radius: 4px;
-  padding: 12px 18px 3px 18px;
+  box-shadow: 0 0 8px 1px #e7e7e7;
+  padding: 12px 18px 6px 18px;
   margin: 18px 0;
 }
 .agent-disp {
@@ -55,47 +72,112 @@
   display: inline-block;
 }
 
-.action-container {
+.element-container {
   margin: 0 0 9px 0;
+  display: flex;
+}
+.left-container {
+  display: inline-block;
+  flex: 1 1 calc(25% - 12px);
+  padding-right: 12px;
+  height: 36px;
+  text-align: right;
+}
+.cen-element {
+  width: 50%;
+  flex: 1 1 50%;
+}
+.right-container {
+  display: inline-block;
+  flex: 1 1 calc(25% - 12px);
+  padding-left: 12px;
+  height: 36px;
+}
+
+.action-container {
 }
 .action-container button {
-  border: 1px solid black;
   border-radius: 4px;
+  border: 1px solid #ddd;
+  box-shadow: 0 0 4px 0 #ddd;
   background: #eee;
-  padding: 6px 0;
-  min-width: 50%;
+  height: 36px;
   font-size: 1rem;
   transition: background 0.1s ease;
+  position: relative;
+  color: #111;
 }
 .action-container button:hover {
   background: #ddd;
 }
 .action-container button:focus {
+  background: #e2e2e2;
+}
+.action-container button:active {
   background: #ccc;
 }
 
 .slider-container {
-  margin: 0 0 9px 0;
-  width: 100%;
-  display: flex;
 }
 .slider-input {
   margin: 0;
-  width: 50%;
-  height: 28px;
-  flex: 1 1 50%;
+  height: 36px;
+  -webkit-appearance: none;
 }
-.slider-text {
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #bbb;
+  box-shadow: 0 0 3px 0 #ddd;
+  background: #ccc;
+}
+.slider-input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #bbb;
+  box-shadow: 0 0 3px 0 #ddd;
+  background: #ccc;
+}
+.slider-input::-ms-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #bbb;
+  box-shadow: 0 0 3px 0 #ddd;
+  background: #ccc;
+}
+.slider-input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #eee;
+}
+.slider-input::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #eee;
+}
+.slider-input::-ms-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #eee;
+}
+
+.action-prog, .slider-name, .slider-val-container {
+  height: 36px;
+  line-height: 36px;
   display: inline-block;
-  margin-left: 9px;
-  height: 28px;
-  flex: 1 1 50%;
 }
 
 .prog-pend:before {
+  color: #db1;
   content: 'pend';
 }
 .prog-done:before {
+  color: #3c5;
   content: 'done';
 }
 </style>
@@ -137,6 +219,7 @@ const createAgent = ({ id, disp, elements }) => {
     if (el.type === 'action') {
       const { name: action, disp } = el
       const actionDiv = templAction.cloneNode(true)
+      actionDiv.attributes.removeNamedItem('id')
       actionDiv.style.removeProperty('display')
       agentDiv.appendChild(actionDiv)
       actionBtn[action] = actionDiv.querySelector('.action-btn')
@@ -152,10 +235,11 @@ const createAgent = ({ id, disp, elements }) => {
     } else if (el.type === 'slider') {
       const { name: key, disp, min, max, step, val } = el
       const sliderDiv = templSlider.cloneNode(true)
+      sliderDiv.attributes.removeNamedItem('id')
       sliderDiv.style.removeProperty('display')
       agentDiv.appendChild(sliderDiv)
       sliderInput[key] = sliderDiv.querySelector('.slider-input')
-      sliderDisp[key] = sliderDiv.querySelector('.slider-disp')
+      sliderDisp[key] = sliderDiv.querySelector('.slider-val')
       sliderProg[key] = sliderDiv.querySelector('.slider-prog')
       sliderInput[key].setAttribute('min', min)
       sliderInput[key].setAttribute('max', max)
@@ -171,8 +255,9 @@ const createAgent = ({ id, disp, elements }) => {
       sliderInput[key].addEventListener('input', () => {
         if (sliderDisableSend[key]) return
         const val = sliderInput[key].value
+        sliderDisp[key].innerText = val.toString()
         sliderAdjustedVal[key] = val
-        if (timer !== undefined) clearInterval(timer)
+        if (timer !== undefined) clearTimeout(timer)
         timer = setTimeout(() => {
           timer = undefined
           const ts = Date.now()
@@ -202,11 +287,12 @@ const createAgent = ({ id, disp, elements }) => {
       actionProg[action].classList.remove('prog-pend')
       actionProg[action].classList.add('prog-done')
       if (actionDoneTimer[action] !== undefined)
-        clearInterval(actionDoneTimer[action])
-      actionDoneTimer[action] = setInterval(() => {
+        clearTimeout(actionDoneTimer[action])
+      actionDoneTimer[action] = setTimeout(() => {
         actionDoneTimer[action] = undefined
         actionProg[action].classList.remove('prog-done')
-      }, 3000)
+        console.log('remove')
+      }, 2000)
     }
   }
 
@@ -223,11 +309,11 @@ const createAgent = ({ id, disp, elements }) => {
       sliderProg[key].classList.remove('prog-pend')
       sliderProg[key].classList.add('prog-done')
       if (sliderDoneTimer[key] !== undefined)
-        clearInterval(sliderDoneTimer[key])
-      sliderDoneTimer[key] = setInterval(() => {
+        clearTimeout(sliderDoneTimer[key])
+      sliderDoneTimer[key] = setTimeout(() => {
         sliderDoneTimer[key] = undefined
         sliderProg[key].classList.remove('prog-done')
-      }, 3000)
+      }, 2000)
     }
   }
 
