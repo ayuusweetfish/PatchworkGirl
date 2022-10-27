@@ -22,52 +22,52 @@
 
 <script>
 (async () => {
-const agentsContainer = document.getElementById('agents-container');
-const templ = document.getElementById('agent-template');
+const agentsContainer = document.getElementById('agents-container')
+const templ = document.getElementById('agent-template')
 
-let socket;
+let socket
 const reconnect = () => {
-  socket = new WebSocket('ws://localhost:1026/admin');
-  const send = (o) => socket.send(JSON.stringify(o));
+  socket = new WebSocket('ws://localhost:1026/admin')
+  const send = (o) => socket.send(JSON.stringify(o))
   socket.onopen = () => {
-  };
+  }
   socket.onclose = () => {
-    agentsContainer.innerHTML = '';
-    setTimeout(() => reconnect(), 1000);
-  };
+    agentsContainer.innerHTML = ''
+    setTimeout(() => reconnect(), 1000)
+  }
   socket.onmessage = (e) => {
-    const o = JSON.parse(e.data);
-    console.log(o);
+    const o = JSON.parse(e.data)
+    console.log(o)
     if (o.type === 'agent-on') {
-      const agentDiv = templ.cloneNode(true);
-      agentDiv.id = 'agent-div-' + o.id;
-      agentDiv.style.removeProperty('display');
-      agentsContainer.appendChild(agentDiv);
-      agentDiv.querySelector('.agent-id').innerText = o.id;
+      const agentDiv = templ.cloneNode(true)
+      agentDiv.id = 'agent-div-' + o.id
+      agentDiv.style.removeProperty('display')
+      agentsContainer.appendChild(agentDiv)
+      agentDiv.querySelector('.agent-id').innerText = o.id
       for (const action of ['a1', 'a2']) {
         agentDiv.querySelector(`.btn-action-${action}`).addEventListener('click', (e) => {
-          send({ type: 'act', id: o.id, ts: Date.now(), name: action });
-        });
+          send({ type: 'act', id: o.id, ts: Date.now(), name: action })
+        })
       }
       for (const [key, val] of Object.entries(o.values)) {
         const input = agentDiv.querySelector(`.slider-input-${key}`)
-        input.value = val;
-        agentDiv.querySelector(`.slider-disp-${key}`).innerText = val.toString();
+        input.value = val
+        agentDiv.querySelector(`.slider-disp-${key}`).innerText = val.toString()
         input.addEventListener('input', () => {
-          send({ type: 'set', id: o.id, ts: Date.now(), key, val: input.value });
-        });
+          send({ type: 'set', id: o.id, ts: Date.now(), key, val: input.value })
+        })
       }
     } else if (o.type === 'agent-off') {
-      document.getElementById('agent-div-' + o.id).remove();
+      document.getElementById('agent-div-' + o.id).remove()
     } else if (o.type === 'agent-upd') {
       const agentDiv = document.getElementById('agent-div-' + o.id)
-      agentDiv.querySelector(`.slider-input-${o.key}`).value = o.val;
-      agentDiv.querySelector(`.slider-disp-${o.key}`).innerText = o.val.toString();
+      agentDiv.querySelector(`.slider-input-${o.key}`).value = o.val
+      agentDiv.querySelector(`.slider-disp-${o.key}`).innerText = o.val.toString()
     }
-  };
-};
-reconnect();
-})();
+  }
+}
+reconnect()
+})()
 </script>
 
 </body></html>
