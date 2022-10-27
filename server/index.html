@@ -124,13 +124,21 @@ const createAgent = (id, elements) => {
     }
   }
 
+  let actionDoneTimer = {}
   const done = (ts, action) => {
     if (ts === actionMaxTs[action]) {
       actionProg[action].classList.remove('prog-pend')
       actionProg[action].classList.add('prog-done')
+      if (actionDoneTimer[action] !== undefined)
+        clearInterval(actionDoneTimer[action])
+      actionDoneTimer[action] = setInterval(() => {
+        actionDoneTimer[action] = undefined
+        actionProg[action].classList.remove('prog-done')
+      }, 3000)
     }
   }
 
+  let sliderDoneTimer = {}
   const update = (ts, key, val) => {
     sliderDisp[key].innerText = val.toString()
     sliderAdjustedVal[key] = val
@@ -142,6 +150,12 @@ const createAgent = (id, elements) => {
     if (ts === sliderMaxTs[key]) {
       sliderProg[key].classList.remove('prog-pend')
       sliderProg[key].classList.add('prog-done')
+      if (sliderDoneTimer[key] !== undefined)
+        clearInterval(sliderDoneTimer[key])
+      sliderDoneTimer[key] = setInterval(() => {
+        sliderDoneTimer[key] = undefined
+        sliderProg[key].classList.remove('prog-done')
+      }, 3000)
     }
   }
 
