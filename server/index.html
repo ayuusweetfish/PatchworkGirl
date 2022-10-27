@@ -6,22 +6,18 @@
 <div id='agents-container'>
 </div>
 
+<div id='action-template' style='display: none'>
+  <button class='action-btn'></button>
+  <span class='action-prog'></span>
+</div>
+<div id='slider-template' style='display: none'>
+  <input type='range' class='slider-input'></input>
+  <span class='slider-name'></span> = <span class='slider-disp'></span>
+  <span class='slider-prog'></span>
+</div>
+
 <div id='agent-template' style='display: none'>
-<p class='agent-id'></p>
-<button class='action-btn-a1'>Action - a1</button>
-<span class='action-prog-a1'></span>
-<button class='action-btn-a2'>Action - a2</button>
-<span class='action-prog-a2'></span>
-<p>
-  <input type='range' min='-9' max='9' value='-9' class='slider-input-s1'></input>
-  s1 = <span class='slider-disp-s1'></span>
-  <span class='slider-prog-s1'></span>
-</p>
-<p>
-  <input type='range' min='0' max='1' value='0' step='any' class='slider-input-s2'></input>
-  s2 = <span class='slider-disp-s2'></span>
-  <span class='slider-prog-s2'></span>
-</p>
+  <p class='agent-id'></p>
 </div>
 
 <style>
@@ -37,13 +33,15 @@
 (async () => {
 const agentsContainer = document.getElementById('agents-container')
 const templ = document.getElementById('agent-template')
+const templAction = document.getElementById('action-template')
+const templSlider = document.getElementById('slider-template')
 
 const agents = {}
 let socket
 
 const send = (o) => socket.send(JSON.stringify(o))
 
-const createAgent = (id, values) => {
+const createAgent = (id, elements) => {
   const agentDiv = templ.cloneNode(true)
   agentDiv.id = 'agent-div-' + id
   agentDiv.style.removeProperty('display')
@@ -63,52 +61,67 @@ const createAgent = (id, values) => {
   const sliderPointerHeld = {}
   const sliderDisableSend = {}
 
-  for (const action of ['a1', 'a2']) {
-    actionBtn[action] = agentDiv.querySelector(`.action-btn-${action}`)
-    actionProg[action] = agentDiv.querySelector(`.action-prog-${action}`)
-    actionBtn[action].addEventListener('click', (e) => {
-      const ts = Date.now()
-      send({ type: 'act', id, ts, action })
-      actionMaxTs[action] = ts
-      actionProg[action].classList.remove('prog-done')
-      actionProg[action].classList.add('prog-pend')
-    })
-  }
-  for (const [key, val] of Object.entries(values)) {
-    sliderInput[key] = agentDiv.querySelector(`.slider-input-${key}`)
-    sliderDisp[key] = agentDiv.querySelector(`.slider-disp-${key}`)
-    sliderProg[key] = agentDiv.querySelector(`.slider-prog-${key}`)
-    sliderInput[key].value = val
-    sliderDisp[key].innerText = val.toString()
-    sliderAdjustedVal[key] = val
-    let timer
-    sliderPointerHeld[key] = false
-    sliderDisableSend[key] = false
-    sliderInput[key].addEventListener('input', () => {
-      if (sliderDisableSend[key]) return
-      const val = sliderInput[key].value
-      sliderAdjustedVal[key] = val
-      if (timer !== undefined) clearInterval(timer)
-      timer = setTimeout(() => {
-        timer = undefined
+  for (const el of elements) {
+    if (el.type === 'action') {
+      const { name: action, disp } = el
+      const actionDiv = templAction.cloneNode(true)
+      actionDiv.style.removeProperty('display')
+      agentDiv.appendChild(actionDiv)
+      actionBtn[action] = actionDiv.querySelector('.action-btn')
+      actionProg[action] = actionDiv.querySelector('.action-prog')
+      actionBtn[action].innerText = disp
+      actionBtn[action].addEventListener('click', (e) => {
         const ts = Date.now()
-        send({ type: 'set', id, ts, key, val })
-        sliderMaxTs[key] = ts
-        sliderProg[key].classList.remove('prog-done')
-        sliderProg[key].classList.add('prog-pend')
-      }, 200)
-    })
-    sliderInput[key].addEventListener('mousedown', () => {
-      sliderPointerHeld[key] = true
-    })
-    sliderInput[key].addEventListener('mouseup', () => {
+        send({ type: 'act', id, ts, action })
+        actionMaxTs[action] = ts
+        actionProg[action].classList.remove('prog-done')
+        actionProg[action].classList.add('prog-pend')
+      })
+    } else if (el.type === 'slider') {
+      const { name: key, disp, min, max, step, val } = el
+      const sliderDiv = templSlider.cloneNode(true)
+      sliderDiv.style.removeProperty('display')
+      agentDiv.appendChild(sliderDiv)
+      sliderInput[key] = sliderDiv.querySelector('.slider-input')
+      sliderDisp[key] = sliderDiv.querySelector('.slider-disp')
+      sliderProg[key] = sliderDiv.querySelector('.slider-prog')
+      sliderInput[key].setAttribute('min', min)
+      sliderInput[key].setAttribute('max', max)
+      sliderInput[key].setAttribute('step', step)
+      const sliderName = sliderDiv.querySelector('.slider-name')
+      sliderName.innerText = disp
+      sliderInput[key].value = val
+      sliderDisp[key].innerText = val.toString()
+      sliderAdjustedVal[key] = val
+      let timer
       sliderPointerHeld[key] = false
-      setTimeout(() => {
-        sliderDisableSend[key] = true
-        sliderInput[key].value = sliderAdjustedVal[key]
-        sliderDisableSend[key] = false
-      }, 100)
-    })
+      sliderDisableSend[key] = false
+      sliderInput[key].addEventListener('input', () => {
+        if (sliderDisableSend[key]) return
+        const val = sliderInput[key].value
+        sliderAdjustedVal[key] = val
+        if (timer !== undefined) clearInterval(timer)
+        timer = setTimeout(() => {
+          timer = undefined
+          const ts = Date.now()
+          send({ type: 'set', id, ts, key, val })
+          sliderMaxTs[key] = ts
+          sliderProg[key].classList.remove('prog-done')
+          sliderProg[key].classList.add('prog-pend')
+        }, 200)
+      })
+      sliderInput[key].addEventListener('mousedown', () => {
+        sliderPointerHeld[key] = true
+      })
+      sliderInput[key].addEventListener('mouseup', () => {
+        sliderPointerHeld[key] = false
+        setTimeout(() => {
+          sliderDisableSend[key] = true
+          sliderInput[key].value = sliderAdjustedVal[key]
+          sliderDisableSend[key] = false
+        }, 100)
+      })
+    }
   }
 
   const done = (ts, action) => {
@@ -156,7 +169,7 @@ const reconnect = () => {
     const o = JSON.parse(e.data)
     console.log(o)
     if (o.type === 'agent-on') {
-      agents[o.id] = createAgent(o.id, o.values)
+      agents[o.id] = createAgent(o.id, o.elements)
     } else if (o.type === 'agent-off') {
       agents[o.id].destroy()
       delete agents[o.id]

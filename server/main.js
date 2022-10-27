@@ -34,8 +34,8 @@ const serveReq = async (req) => {
         log('Admin connected')
         send({ type: 'id', id: clientId })
         socketsAdmin[clientId] = socket
-        for (const [agentClientId, { values }] of Object.entries(socketsAgent))
-          send({ type: 'agent-on', id: agentClientId, values })
+        for (const [agentClientId, { elements }] of Object.entries(socketsAgent))
+          send({ type: 'agent-on', id: agentClientId, elements })
       }
       socket.onclose = () => {
         delete socketsAdmin[clientId]
@@ -50,14 +50,15 @@ const serveReq = async (req) => {
         }
       }
     } else {
-      const values = {}
+      const elements = []
+      const elementsIdx = {}
       let initialized = false
       socket.onopen = () => {
         log(`Agent ${clientId} connected`)
         send({ type: 'id', id: clientId })
         setTimeout(() => {
           if (!initialized) {
-            log(`Agent ${clientId} missing keys: ${(valueKeys.filter((k) => values[k] === undefined)).join(', ')}, disconnecting`)
+            log(`Agent ${clientId} never introduced itself, disconnecting`)
             socket.close()
           }
         }, 5000)
@@ -70,18 +71,25 @@ const serveReq = async (req) => {
       }
       socket.onmessage = (e) => {
         const o = JSON.parse(e.data)
-        if (o.type === 'done') {
+        if (o.type === 'intro') {
+          for (const el of o.elements) {
+            elementsIdx[el.name] = elements.length
+            if (el.type === 'action') {
+              elements.push({ type: 'action', name: el.name, disp: el.disp })
+            } else if (el.type === 'slider') {
+              elements.push({ type: 'slider', name: el.name, disp: el.disp,
+                min: +el.min, max: +el.max, step: +el.step || 'any', val: +el.val })
+            }
+          }
+          initialized = true;
+          adminBroadcast({ type: 'agent-on', id: clientId, elements })
+          socketsAgent[clientId] = { socket, elements }
+        } else if (o.type === 'done') {
           adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
         } else if (o.type === 'upd') {
-          values[o.key] = o.val
+          elements[elementsIdx[o.key]].val = +o.val
           if (initialized) {
             adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: o.val })
-          } else {
-            if (valueKeys.every((k) => values[k] !== undefined)) {
-              initialized = true;
-              adminBroadcast({ type: 'agent-on', id: clientId, values })
-              socketsAgent[clientId] = { socket, values }
-            }
           }
         }
       }
@@ -102,7 +110,11 @@ const handleConn = async (conn) => {
       await evt.respondWith(await serveReq(req))
     } catch (e) {
       log(`Error: ${e}`)
-      await evt.respondWith(new Response('', { status: 500 }))
+      try {
+        await evt.respondWith(new Response('', { status: 500 }))
+      } catch (e) {
+        log(`Cannot return 500 response: ${e}`)
+      }
     }
   }
 }

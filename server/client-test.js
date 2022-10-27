@@ -8,8 +8,12 @@ const reconnect = () => {
     const o = JSON.parse(e.data)
     if (o.type === 'id') {
       console.log(`Connected! Client ID is ${o.id}`)
-      send({ type: 'upd', ts: 0, key: 's1', val: 2 })
-      send({ type: 'upd', ts: 0, key: 's2', val: 0.4 })
+      send({ type: 'intro', elements: [
+        { name: 'a1', type: 'action', disp: 'Action One' },
+        { name: 'a2', type: 'action', disp: 'Action Two' },
+        { name: 's1', type: 'slider', disp: 'Slider One', min: -10, max: 10, val: 3, step: 1 },
+        { name: 's2', type: 'slider', disp: 'Slider Two', min: 0, max: 1, val: 0.4 },
+      ]})
     } else if (o.type === 'act') {
       setTimeout(() => {
         send({ type: 'done', ts: o.ts, action: o.action })

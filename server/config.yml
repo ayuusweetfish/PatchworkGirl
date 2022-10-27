@@ -1,6 +1,1 @@
 port: 1026
-control:
-  - action: a1
-  - action: a2
-  - slider: [s1, -9, 9]
-  - slider: [s2, 0, 1]
