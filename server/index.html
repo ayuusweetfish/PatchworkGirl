@@ -8,61 +8,162 @@
 
 <div id='agent-template' style='display: none'>
 <p class='agent-id'></p>
-<button class='btn-action-a1'>Action - a1</button>
-<button class='btn-action-a2'>Action - a2</button>
+<button class='action-btn-a1'>Action - a1</button>
+<span class='action-prog-a1'></span>
+<button class='action-btn-a2'>Action - a2</button>
+<span class='action-prog-a2'></span>
 <p>
-  <input type='range' min='-5' max='5' value='-5' class='slider-input-s1'></input>
+  <input type='range' min='-9' max='9' value='-9' class='slider-input-s1'></input>
   s1 = <span class='slider-disp-s1'></span>
+  <span class='slider-prog-s1'></span>
 </p>
 <p>
-  <input type='range' min='0' max='1' value='0' class='slider-input-s2'></input>
+  <input type='range' min='0' max='1' value='0' step='any' class='slider-input-s2'></input>
   s2 = <span class='slider-disp-s2'></span>
+  <span class='slider-prog-s2'></span>
 </p>
 </div>
+
+<style>
+.prog-pend::before {
+  content: 'pend';
+}
+.prog-done::before {
+  content: 'done';
+}
+</style>
 
 <script>
 (async () => {
 const agentsContainer = document.getElementById('agents-container')
 const templ = document.getElementById('agent-template')
 
+const agents = {}
 let socket
+
+const send = (o) => socket.send(JSON.stringify(o))
+
+const createAgent = (id, values) => {
+  const agentDiv = templ.cloneNode(true)
+  agentDiv.id = 'agent-div-' + id
+  agentDiv.style.removeProperty('display')
+  agentsContainer.appendChild(agentDiv)
+  agentDiv.querySelector('.agent-id').innerText = id
+
+  const actionBtn = {}
+  const actionProg = {}
+  const sliderInput = {}
+  const sliderDisp = {}
+  const sliderProg = {}
+
+  const actionMaxTs = {}
+  const sliderMaxTs = {}
+
+  const sliderAdjustedVal = {}
+  const sliderPointerHeld = {}
+  const sliderDisableSend = {}
+
+  for (const action of ['a1', 'a2']) {
+    actionBtn[action] = agentDiv.querySelector(`.action-btn-${action}`)
+    actionProg[action] = agentDiv.querySelector(`.action-prog-${action}`)
+    actionBtn[action].addEventListener('click', (e) => {
+      const ts = Date.now()
+      send({ type: 'act', id, ts, action })
+      actionMaxTs[action] = ts
+      actionProg[action].classList.remove('prog-done')
+      actionProg[action].classList.add('prog-pend')
+    })
+  }
+  for (const [key, val] of Object.entries(values)) {
+    sliderInput[key] = agentDiv.querySelector(`.slider-input-${key}`)
+    sliderDisp[key] = agentDiv.querySelector(`.slider-disp-${key}`)
+    sliderProg[key] = agentDiv.querySelector(`.slider-prog-${key}`)
+    sliderInput[key].value = val
+    sliderDisp[key].innerText = val.toString()
+    sliderAdjustedVal[key] = val
+    let timer
+    sliderPointerHeld[key] = false
+    sliderDisableSend[key] = false
+    sliderInput[key].addEventListener('input', () => {
+      if (sliderDisableSend[key]) return
+      const val = sliderInput[key].value
+      sliderAdjustedVal[key] = val
+      if (timer !== undefined) clearInterval(timer)
+      timer = setTimeout(() => {
+        timer = undefined
+        const ts = Date.now()
+        send({ type: 'set', id, ts, key, val })
+        sliderMaxTs[key] = ts
+        sliderProg[key].classList.remove('prog-done')
+        sliderProg[key].classList.add('prog-pend')
+      }, 200)
+    })
+    sliderInput[key].addEventListener('mousedown', () => {
+      sliderPointerHeld[key] = true
+    })
+    sliderInput[key].addEventListener('mouseup', () => {
+      sliderPointerHeld[key] = false
+      setTimeout(() => {
+        sliderDisableSend[key] = true
+        sliderInput[key].value = sliderAdjustedVal[key]
+        sliderDisableSend[key] = false
+      }, 100)
+    })
+  }
+
+  const done = (ts, action) => {
+    if (ts === actionMaxTs[action]) {
+      actionProg[action].classList.remove('prog-pend')
+      actionProg[action].classList.add('prog-done')
+    }
+  }
+
+  const update = (ts, key, val) => {
+    sliderDisp[key].innerText = val.toString()
+    sliderAdjustedVal[key] = val
+    if (!sliderPointerHeld[key]) {
+      sliderDisableSend[key] = true
+      sliderInput[key].value = sliderAdjustedVal[key]
+      sliderDisableSend[key] = false
+    }
+    if (ts === sliderMaxTs[key]) {
+      sliderProg[key].classList.remove('prog-pend')
+      sliderProg[key].classList.add('prog-done')
+    }
+  }
+
+  const destroy = () => agentDiv.remove()
+
+  return {
+    done,
+    update,
+    destroy,
+  }
+}
+
 const reconnect = () => {
   socket = new WebSocket('ws://localhost:1026/admin')
-  const send = (o) => socket.send(JSON.stringify(o))
   socket.onopen = () => {
   }
   socket.onclose = () => {
-    agentsContainer.innerHTML = ''
+    for (const id in agents) {
+      agents[id].destroy()
+      delete agents[id]
+    }
     setTimeout(() => reconnect(), 1000)
   }
   socket.onmessage = (e) => {
     const o = JSON.parse(e.data)
     console.log(o)
     if (o.type === 'agent-on') {
-      const agentDiv = templ.cloneNode(true)
-      agentDiv.id = 'agent-div-' + o.id
-      agentDiv.style.removeProperty('display')
-      agentsContainer.appendChild(agentDiv)
-      agentDiv.querySelector('.agent-id').innerText = o.id
-      for (const action of ['a1', 'a2']) {
-        agentDiv.querySelector(`.btn-action-${action}`).addEventListener('click', (e) => {
-          send({ type: 'act', id: o.id, ts: Date.now(), name: action })
-        })
-      }
-      for (const [key, val] of Object.entries(o.values)) {
-        const input = agentDiv.querySelector(`.slider-input-${key}`)
-        input.value = val
-        agentDiv.querySelector(`.slider-disp-${key}`).innerText = val.toString()
-        input.addEventListener('input', () => {
-          send({ type: 'set', id: o.id, ts: Date.now(), key, val: input.value })
-        })
-      }
+      agents[o.id] = createAgent(o.id, o.values)
     } else if (o.type === 'agent-off') {
-      document.getElementById('agent-div-' + o.id).remove()
+      agents[o.id].destroy()
+      delete agents[o.id]
+    } else if (o.type === 'agent-done') {
+      agents[o.id].done(o.ts, o.action)
     } else if (o.type === 'agent-upd') {
-      const agentDiv = document.getElementById('agent-div-' + o.id)
-      agentDiv.querySelector(`.slider-input-${o.key}`).value = o.val
-      agentDiv.querySelector(`.slider-disp-${o.key}`).innerText = o.val.toString()
+      agents[o.id].update(o.ts, o.key, o.val)
     }
   }
 }

@@ -44,7 +44,7 @@ const serveReq = async (req) => {
         const o = JSON.parse(e.data)
         const { socket } = socketsAgent[o.id]
         if (o.type === 'act') {
-          socket.send(JSON.stringify({ type: 'act', ts: o.ts, name: o.name }))
+          socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
         } else if (o.type === 'set') {
           socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: o. val }))
         }
@@ -71,7 +71,7 @@ const serveReq = async (req) => {
       socket.onmessage = (e) => {
         const o = JSON.parse(e.data)
         if (o.type === 'done') {
-          adminBroadcast({ type: 'done', id: clientId, ts: o.ts, name: o.name })
+          adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
         } else if (o.type === 'upd') {
           values[o.key] = o.val
           if (initialized) {
@@ -99,10 +99,10 @@ const handleConn = async (conn) => {
   for await (const evt of httpConn) {
     const req = evt.request
     try {
-      evt.respondWith(await serveReq(req))
+      await evt.respondWith(await serveReq(req))
     } catch (e) {
       log(`Error: ${e}`)
-      evt.respondWith(new Response('', { status: 500 }))
+      await evt.respondWith(new Response('', { status: 500 }))
     }
   }
 }

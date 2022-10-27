@@ -12,12 +12,13 @@ const reconnect = () => {
       send({ type: 'upd', ts: 0, key: 's2', val: 0.4 })
     } else if (o.type === 'act') {
       setTimeout(() => {
-        send({ type: 'done', ts: o.ts, name: o.name })
-        if (o.name === 'a1')
+        send({ type: 'done', ts: o.ts, action: o.action })
+        if (o.action === 'a1')
           send({ type: 'upd', ts: o.ts, key: 's2', val: Math.random() })
       }, 1000)
     } else if (o.type === 'set') {
-      setTimeout(() => send({ type: 'upd', ts: o.ts, key: o.key, val: o.val }), 1000)
+      const val = (o.key === 's1' ? Math.round(o.val / 3) * 3 : o.val)
+      setTimeout(() => send({ type: 'upd', ts: o.ts, key: o.key, val }), 200)
     }
   }
 }
