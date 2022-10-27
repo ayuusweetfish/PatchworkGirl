@@ -226,7 +226,7 @@ const createAgent = ({ id, disp, elements }) => {
       actionProg[action] = actionDiv.querySelector('.action-prog')
       actionBtn[action].innerText = disp
       actionBtn[action].addEventListener('click', (e) => {
-        const ts = Date.now()
+        const ts = Date.now().toString()
         send({ type: 'act', id, ts, action })
         actionMaxTs[action] = ts
         actionProg[action].classList.remove('prog-done')
@@ -260,7 +260,7 @@ const createAgent = ({ id, disp, elements }) => {
         if (timer !== undefined) clearTimeout(timer)
         timer = setTimeout(() => {
           timer = undefined
-          const ts = Date.now()
+          const ts = Date.now().toString()
           send({ type: 'set', id, ts, key, val })
           sliderMaxTs[key] = ts
           sliderProg[key].classList.remove('prog-done')

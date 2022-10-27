@@ -46,7 +46,7 @@ const serveReq = async (req) => {
         if (o.type === 'act') {
           socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
         } else if (o.type === 'set') {
-          socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: o. val }))
+          socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: +o.val }))
         }
       }
     } else {
@@ -90,7 +90,7 @@ const serveReq = async (req) => {
         } else if (o.type === 'upd') {
           elements[elementsIdx[o.key]].val = +o.val
           if (initialized) {
-            adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: o.val })
+            adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: +o.val })
           }
         }
       }
