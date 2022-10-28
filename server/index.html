@@ -3,10 +3,14 @@
   <title>Patchwork</title>
 </head><body>
 
-<div id='agents-container'>
+<div id='conn-status'>
 </div>
 
-<div id='conn-status' class='connecting'>
+<div id='auth-container'>
+  <input id='input-auth' type='password' placeholder='Password'></input>
+  <button id='confirm-auth'>Ok</button>
+</div>
+<div id='agents-container' style='display: none'>
 </div>
 
 <div id='action-template' class='element-container action-container' style='display: none'>
@@ -45,12 +49,64 @@ body {
   font-family: 'Source Sans Pro', sans-serif;
 }
 
-#agents-container {
+button {
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  box-shadow: 0 0 4px 0 #ddd;
+  background: #eee;
+  height: 36px;
+  font-size: 1rem;
+  transition: background 0.1s ease, color 0.1s ease;
+  position: relative;
+  color: #111;
+}
+button:hover {
+  background: #ddd;
+}
+button:focus {
+  background: #e2e2e2;
+}
+button:active {
+  background: #ccc;
+}
+button[disabled="1"] {
+  background: #e7e7e7;
+  color: #999;
+}
+
+#input-auth {
+  display: block;
+  height: 36px;
+  border: none;
+  width: calc(100% - 24px);
+  padding: 0 12px;
+  margin: 60px 0 12px 0;
+  font-size: 1em;
+  border-radius: 4px;
+  box-shadow: 0 0 8px 1px #e7e7e7;
+  outline: 0px solid #ccc;
+  transition: outline 0.1s ease, box-shadow 0.1s ease;
+}
+#input-auth:focus {
+  outline-width: 2px;
+}
+#input-auth.fail {
+  outline-width: 1px;
+  outline-color: #f97;
+  box-shadow: 0 0 8px 1px #f97;
+}
+#confirm-auth {
+  width: 100%;
+  display: block;
+}
+
+#auth-container, #agents-container {
   min-height: 100%;
   margin: 0 auto;
   width: 100%;
   max-width: 80vh;
   position: relative;
+  clear: both;
 }
 
 .agent-container {
@@ -98,26 +154,6 @@ body {
 }
 
 .action-container {
-}
-.action-container button {
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  box-shadow: 0 0 4px 0 #ddd;
-  background: #eee;
-  height: 36px;
-  font-size: 1rem;
-  transition: background 0.1s ease;
-  position: relative;
-  color: #111;
-}
-.action-container button:hover {
-  background: #ddd;
-}
-.action-container button:focus {
-  background: #e2e2e2;
-}
-.action-container button:active {
-  background: #ccc;
 }
 
 .slider-container {
@@ -187,22 +223,28 @@ body {
 #conn-status {
   float: right;
 }
-#conn-status.offline:before {
-  color: #aaa;
-  content: 'Offline'
+#conn-status:before {
+  color: #ddd;
+  content: 'Offline';
 }
 #conn-status.connecting:before {
   color: #db1;
-  content: 'Connecting'
+  content: 'Connecting';
 }
 #conn-status.connected:before {
   color: #3c5;
-  content: 'Connected'
+  content: 'Connected';
 }
 </style>
 
 <script>
 (async () => {
+const authContainer = document.getElementById('auth-container')
+const inputAuth = document.getElementById('input-auth')
+const confirmAuth = document.getElementById('confirm-auth')
+
+let password
+
 const agentsContainer = document.getElementById('agents-container')
 const templ = document.getElementById('agent-template')
 const templAction = document.getElementById('action-template')
@@ -240,7 +282,7 @@ const createAgent = ({ id, disp, elements }) => {
     if (el.type === 'action') {
       const { name: action, disp } = el
       const actionDiv = templAction.cloneNode(true)
-      actionDiv.attributes.removeNamedItem('id')
+      actionDiv.removeAttribute('id')
       actionDiv.style.removeProperty('display')
       agentDiv.appendChild(actionDiv)
       actionBtn[action] = actionDiv.querySelector('.action-btn')
@@ -256,7 +298,7 @@ const createAgent = ({ id, disp, elements }) => {
     } else if (el.type === 'slider') {
       const { name: key, disp, min, max, step, val } = el
       const sliderDiv = templSlider.cloneNode(true)
-      sliderDiv.attributes.removeNamedItem('id')
+      sliderDiv.removeAttribute('id')
       sliderDiv.style.removeProperty('display')
       agentDiv.appendChild(sliderDiv)
       sliderInput[key] = sliderDiv.querySelector('.slider-input')
@@ -312,7 +354,6 @@ const createAgent = ({ id, disp, elements }) => {
       actionDoneTimer[action] = setTimeout(() => {
         actionDoneTimer[action] = undefined
         actionProg[action].classList.remove('prog-done')
-        console.log('remove')
       }, 2000)
     }
   }
@@ -353,8 +394,10 @@ const reconnect = () => {
   socket = new WebSocket(
     (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
     window.location.host +
-    '/admin')
+    window.location.pathname)
+  const s = socket
   socket.onopen = () => {
+    send({ type: 'intro', auth: password })
   }
   socket.onclose = () => {
     for (const id in agents) {
@@ -363,14 +406,25 @@ const reconnect = () => {
     }
     connStatus.classList.remove('connected')
     connStatus.classList.add('connecting')
+    socket = undefined
     setTimeout(() => reconnect(), 1000)
   }
   socket.onmessage = (e) => {
     const o = JSON.parse(e.data)
     console.log(o)
-    if (o.type === 'id') {
+    if (o.type === 'auth') {
+      confirmAuth.removeAttribute('disabled')
       connStatus.classList.remove('connecting')
-      connStatus.classList.add('connected')
+      if (o.success) {
+        connStatus.classList.add('connected')
+        inputAuth.classList.remove('fail')
+        authContainer.style.display = 'none'
+        agentsContainer.style.display = 'block'
+      } else {
+        inputAuth.classList.add('fail')
+        authContainer.style.display = 'block'
+        agentsContainer.style.display = 'none'
+      }
     } else if (o.type === 'agent-on') {
       agents[o.id] = createAgent(o)
     } else if (o.type === 'agent-off') {
@@ -383,7 +437,15 @@ const reconnect = () => {
     }
   }
 }
-reconnect()
+
+inputAuth.addEventListener('input', () => {
+  inputAuth.classList.remove('fail')
+})
+confirmAuth.addEventListener('click', () => {
+  confirmAuth.setAttribute('disabled', '1')
+  password = inputAuth.value
+  reconnect()
+})
 })()
 </script>
 

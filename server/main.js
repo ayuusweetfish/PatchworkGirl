@@ -10,8 +10,6 @@ const port = cfg.port || 1026
 const server = Deno.listen({ port })
 log(`Running at http://localhost:${port}/`)
 
-const valueKeys = ['s1', 's2']
-
 const socketsAdmin = {}
 const socketsAgent = {}
 
@@ -26,52 +24,47 @@ const serveReq = async (req) => {
   if (req.headers.get('upgrade') === 'websocket') {
     const { socket, response } = Deno.upgradeWebSocket(req)
     const path = (new URL(req.url)).pathname
-    const isAdmin = (path === '/admin')
     const clientId = crypto.randomUUID()
     const send = (o) => socket.send(JSON.stringify(o))
-    if (isAdmin) {
-      socket.onopen = () => {
-        log('Admin connected')
-        send({ type: 'id', id: clientId })
-        socketsAdmin[clientId] = socket
-        for (const [agentClientId, { disp, elements }] of Object.entries(socketsAgent))
-          send({ type: 'agent-on', id: agentClientId, disp, elements })
-      }
-      socket.onclose = () => {
-        delete socketsAdmin[clientId]
-      }
-      socket.onmessage = (e) => {
-        const o = JSON.parse(e.data)
-        const { socket } = socketsAgent[o.id]
-        if (o.type === 'act') {
-          socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
-        } else if (o.type === 'set') {
-          socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: +o.val }))
+    let initialized = false
+    socket.onopen = () => {
+      log(`Agent ${clientId} connected`)
+      send({ type: 'id', id: clientId })
+      setTimeout(() => {
+        if (!initialized) {
+          log(`Agent ${clientId} never introduced itself, disconnecting`)
+          socket.close()
         }
-      }
-    } else {
-      const elements = []
-      const elementsIdx = {}
-      let initialized = false
-      socket.onopen = () => {
-        log(`Agent ${clientId} connected`)
-        send({ type: 'id', id: clientId })
-        setTimeout(() => {
-          if (!initialized) {
-            log(`Agent ${clientId} never introduced itself, disconnecting`)
-            socket.close()
+      }, 5000)
+    }
+    socket.onmessage = (e) => {
+      const o = JSON.parse(e.data)
+      if (o.type === 'intro') {
+        initialized = true
+        if (o.auth === '111') {
+          log(`Agent ${clientId} authorized as administrator`)
+          socketsAdmin[clientId] = socket
+          send({ type: 'auth', success: true })
+          for (const [agentClientId, { disp, elements }] of Object.entries(socketsAgent))
+            send({ type: 'agent-on', id: agentClientId, disp, elements })
+          socket.onclose = () => {
+            delete socketsAdmin[clientId]
           }
-        }, 5000)
-      }
-      socket.onclose = () => {
-        if (initialized) {
-          adminBroadcast({ type: 'agent-off', id: clientId })
-          delete socketsAgent[clientId]
-        }
-      }
-      socket.onmessage = (e) => {
-        const o = JSON.parse(e.data)
-        if (o.type === 'intro') {
+          socket.onmessage = (e) => {
+            const o = JSON.parse(e.data)
+            const { socket } = socketsAgent[o.id]
+            if (o.type === 'act') {
+              socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
+            } else if (o.type === 'set') {
+              socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: +o.val }))
+            }
+          }
+        } else if (o.auth !== undefined) {
+          log(`Agent ${clientId} fails to authorize`)
+          send({ type: 'auth', success: false })
+        } else {
+          const elements = []
+          const elementsIdx = {}
           const disp = o.disp
           for (const el of o.elements) {
             elementsIdx[el.name] = elements.length
@@ -82,15 +75,20 @@ const serveReq = async (req) => {
                 min: +el.min, max: +el.max, step: +el.step || 'any', val: +el.val })
             }
           }
-          initialized = true;
           adminBroadcast({ type: 'agent-on', id: clientId, disp, elements })
           socketsAgent[clientId] = { socket, disp, elements }
-        } else if (o.type === 'done') {
-          adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
-        } else if (o.type === 'upd') {
-          elements[elementsIdx[o.key]].val = +o.val
-          if (initialized) {
-            adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: +o.val })
+          socket.onmessage = (e) => {
+            const o = JSON.parse(e.data)
+            if (o.type === 'done') {
+              adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
+            } else if (o.type === 'upd') {
+              elements[elementsIdx[o.key]].val = +o.val
+              adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: +o.val })
+            }
+          }
+          socket.onclose = () => {
+            adminBroadcast({ type: 'agent-off', id: clientId })
+            delete socketsAgent[clientId]
           }
         }
       }
