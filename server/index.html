@@ -6,6 +6,9 @@
 <div id='agents-container'>
 </div>
 
+<div id='conn-status' class='connecting'>
+</div>
+
 <div id='action-template' class='element-container action-container' style='display: none'>
   <div class='left-container'></div>
   <button class='cen-element action-btn'></button>
@@ -180,6 +183,22 @@ body {
   color: #3c5;
   content: 'done';
 }
+
+#conn-status {
+  float: right;
+}
+#conn-status.offline:before {
+  color: #aaa;
+  content: 'Offline'
+}
+#conn-status.connecting:before {
+  color: #db1;
+  content: 'Connecting'
+}
+#conn-status.connected:before {
+  color: #3c5;
+  content: 'Connected'
+}
 </style>
 
 <script>
@@ -188,6 +207,8 @@ const agentsContainer = document.getElementById('agents-container')
 const templ = document.getElementById('agent-template')
 const templAction = document.getElementById('action-template')
 const templSlider = document.getElementById('slider-template')
+
+const connStatus = document.getElementById('conn-status')
 
 const agents = {}
 let socket
@@ -327,7 +348,12 @@ const createAgent = ({ id, disp, elements }) => {
 }
 
 const reconnect = () => {
-  socket = new WebSocket('ws://localhost:1026/admin')
+  connStatus.classList.remove('connected')
+  connStatus.classList.add('connecting')
+  socket = new WebSocket(
+    (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+    window.location.host +
+    '/admin')
   socket.onopen = () => {
   }
   socket.onclose = () => {
@@ -335,12 +361,17 @@ const reconnect = () => {
       agents[id].destroy()
       delete agents[id]
     }
+    connStatus.classList.remove('connected')
+    connStatus.classList.add('connecting')
     setTimeout(() => reconnect(), 1000)
   }
   socket.onmessage = (e) => {
     const o = JSON.parse(e.data)
     console.log(o)
-    if (o.type === 'agent-on') {
+    if (o.type === 'id') {
+      connStatus.classList.remove('connecting')
+      connStatus.classList.add('connected')
+    } else if (o.type === 'agent-on') {
       agents[o.id] = createAgent(o)
     } else if (o.type === 'agent-off') {
       agents[o.id].destroy()
