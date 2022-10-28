@@ -457,6 +457,9 @@ const startConnect = () => {
   reconnect()
 }
 confirmAuth.addEventListener('click', startConnect)
+inputAuth.addEventListener('keydown', (e) => {
+  if (e.keyCode === 13) startConnect()
+})
 if (password !== undefined) {
   authContainer.style.display = 'none'
   inputAuth.value = password
