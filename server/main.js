@@ -41,7 +41,7 @@ const serveReq = async (req) => {
       const o = JSON.parse(e.data)
       if (o.type === 'intro') {
         initialized = true
-        if (o.auth === '111') {
+        if (o.auth === cfg.password) {
           log(`Agent ${clientId} authorized as administrator`)
           socketsAdmin[clientId] = socket
           send({ type: 'auth', success: true })
