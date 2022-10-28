@@ -244,6 +244,15 @@ const inputAuth = document.getElementById('input-auth')
 const confirmAuth = document.getElementById('confirm-auth')
 
 let password
+for (const s of document.cookie.split(';')) if (s) {
+  const i = s.indexOf('=')
+  const key = decodeURIComponent(s.substring(0, i).trim())
+  const value = decodeURIComponent(s.substring(i + 1))
+  if (key === 'password') {
+    password = value
+    break
+  }
+}
 
 const agentsContainer = document.getElementById('agents-container')
 const templ = document.getElementById('agent-template')
@@ -420,6 +429,7 @@ const reconnect = () => {
         inputAuth.classList.remove('fail')
         authContainer.style.display = 'none'
         agentsContainer.style.display = 'block'
+        document.cookie = `password=${encodeURIComponent(password)}; samesite=strict; max-age=86400`
       } else {
         inputAuth.classList.add('fail')
         authContainer.style.display = 'block'
@@ -441,11 +451,17 @@ const reconnect = () => {
 inputAuth.addEventListener('input', () => {
   inputAuth.classList.remove('fail')
 })
-confirmAuth.addEventListener('click', () => {
+const startConnect = () => {
   confirmAuth.setAttribute('disabled', '1')
   password = inputAuth.value
   reconnect()
-})
+}
+confirmAuth.addEventListener('click', startConnect)
+if (password !== undefined) {
+  authContainer.style.display = 'none'
+  inputAuth.value = password
+  startConnect()
+}
 })()
 </script>
 
