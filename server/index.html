@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html><head>
+  <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' />
   <title>Patchwork</title>
 </head><body>
 
@@ -103,7 +104,8 @@ button[disabled="1"] {
 #auth-container, #agents-container {
   min-height: 100%;
   margin: 0 auto;
-  width: 100%;
+  padding: 0 24px;
+  width: calc(100% - 48px);
   max-width: 80vh;
   position: relative;
   clear: both;
@@ -116,6 +118,8 @@ button[disabled="1"] {
   box-shadow: 0 0 8px 1px #e7e7e7;
   padding: 12px 18px 6px 18px;
   margin: 18px 0;
+  position: relative;
+  left: -18px;
 }
 .agent-disp {
   margin: 0 0 12px 0;
@@ -213,15 +217,16 @@ button[disabled="1"] {
 
 .prog-pend:before {
   color: #db1;
-  content: 'pend';
+  content: '…';
 }
 .prog-done:before {
   color: #3c5;
-  content: 'done';
+  content: '✓';
 }
 
 #conn-status {
   float: right;
+  margin-bottom: 6px;
 }
 #conn-status:before {
   color: #ddd;
@@ -319,8 +324,8 @@ const createAgent = ({ id, disp, elements }) => {
       const sliderName = sliderDiv.querySelector('.slider-name')
       sliderName.innerText = disp
       sliderInput[key].value = val
-      sliderDisp[key].innerText = val.toString()
-      sliderAdjustedVal[key] = val
+      sliderAdjustedVal[key] = +(min + Math.round((val - min) / step) * step).toPrecision(5)
+      sliderDisp[key].innerText = sliderAdjustedVal[key].toString()
       let timer
       sliderPointerHeld[key] = false
       sliderDisableSend[key] = false
@@ -369,8 +374,10 @@ const createAgent = ({ id, disp, elements }) => {
 
   let sliderDoneTimer = {}
   const update = (ts, key, val) => {
-    sliderDisp[key].innerText = val.toString()
-    sliderAdjustedVal[key] = val
+    const min = +sliderInput[key].getAttribute('min')
+    const step = +sliderInput[key].getAttribute('step')
+    sliderAdjustedVal[key] = +(min + Math.round((val - min) / step) * step).toPrecision(5)
+    sliderDisp[key].innerText = sliderAdjustedVal[key].toString()
     if (!sliderPointerHeld[key]) {
       sliderDisableSend[key] = true
       sliderInput[key].value = sliderAdjustedVal[key]
