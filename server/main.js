@@ -24,7 +24,7 @@ const serveReq = async (req) => {
   if (req.headers.get('upgrade') === 'websocket') {
     const { socket, response } = Deno.upgradeWebSocket(req)
     const path = (new URL(req.url)).pathname
-    const clientId = crypto.randomUUID()
+    let clientId = crypto.randomUUID()
     const send = (o) => socket.send(JSON.stringify(o))
     let initialized = false
     socket.onopen = () => {
@@ -52,6 +52,7 @@ const serveReq = async (req) => {
           }
           socket.onmessage = (e) => {
             const o = JSON.parse(e.data)
+            if (socketsAgent[o.id] === undefined) { return }
             const { socket } = socketsAgent[o.id]
             if (o.type === 'act') {
               socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
@@ -75,7 +76,23 @@ const serveReq = async (req) => {
                 min: +el.min, max: +el.max, step: +el.step || 'any', val: +el.val })
             }
           }
-          adminBroadcast({ type: 'agent-on', id: clientId, disp, elements })
+          let replaced = false
+          if (o.id !== undefined) {
+            if (socketsAgent[o.id] !== undefined) {
+              const previousSocket = socketsAgent[o.id].socket
+              previousSocket.onclose = () => {}
+              previousSocket.close()
+              for (const el of elements) if (el.type === 'slider') {
+                adminBroadcast({ type: 'agent-upd', id: o.id, ts: '', key: el.name, val: +el.val })
+              }
+              replaced = true
+            }
+            log(`Agent ${clientId} renamed to ${o.id}${replaced ? ', replacing original' : ''}`)
+            clientId = o.id
+          }
+          if (!replaced) {
+            adminBroadcast({ type: 'agent-on', id: clientId, disp, elements })
+          }
           socketsAgent[clientId] = { socket, disp, elements }
           socket.onmessage = (e) => {
             const o = JSON.parse(e.data)

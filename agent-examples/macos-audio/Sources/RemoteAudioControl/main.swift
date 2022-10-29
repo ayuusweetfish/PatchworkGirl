@@ -4,6 +4,7 @@ import Starscream
 var request: URLRequest!
 var socket: WebSocket!
 var lastPong = 0.0
+var lastClientId = ""
 
 let output = SoundOutputManager()
 
@@ -42,14 +43,23 @@ func reconnect() {
       let header = try! JSONDecoder().decode(MessageHeader.self, from: string.data(using: .utf8)!)
       switch header.type {
       case "id":
+        struct IdMessage: Codable {
+          let id: String
+        }
+        let msg = try! JSONDecoder().decode(IdMessage.self, from: string.data(using: .utf8)!)
         let vol = try! output.readVolume()
         let bal = try! output.readBalance()
         send(string: #"""
-        { "type": "intro", "disp": "macOS Audio", "elements": [
+        { "type": "intro", "disp": "macOS Audio",
+          \#(lastClientId == "" ? "" : ##""id": "\##(lastClientId)","##)
+        "elements": [
           { "name": "vol", "type": "slider", "disp": "Volume", "min": 0, "max": 1, "step": 0.01, "val": \#(vol) },
           { "name": "bal", "type": "slider", "disp": "Balance", "min": 0, "max": 1, "step": 0.01, "val": \#(bal) }
         ] }
         """#)
+        if lastClientId == "" {
+          lastClientId = msg.id
+        }
       case "set":
         struct SetMessage: Codable {
           let ts: String
@@ -96,4 +106,6 @@ DispatchQueue(label: "pingpong", qos: .userInitiated).async {
 
 while true {
   Thread.sleep(forTimeInterval: 10)
+  print("Interrupting to test reconnection!")
+  socket.disconnect()
 }
