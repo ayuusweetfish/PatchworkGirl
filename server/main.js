@@ -86,7 +86,8 @@ const serveReq = async (req) => {
               adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: +o.val })
             }
           }
-          socket.onclose = () => {
+          socket.onclose = (e) => {
+            log(`Agent ${clientId} disconnected: code = ${e.code}`)
             adminBroadcast({ type: 'agent-off', id: clientId })
             delete socketsAgent[clientId]
           }

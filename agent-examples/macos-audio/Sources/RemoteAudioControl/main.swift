@@ -3,14 +3,18 @@ import Starscream
 
 var request: URLRequest!
 var socket: WebSocket!
+var lastPong = 0.0
 
 let output = SoundOutputManager()
 
 func reconnect() {
+  socket?.disconnect()
+
   request = URLRequest(url: URL(string: "http://localhost:1026")!)
   request.timeoutInterval = 5
   socket = WebSocket(request: request)
   socket.callbackQueue = DispatchQueue(label: "art.0-th.patchwork.remoteaudiocontrol")
+  lastPong = Date().timeIntervalSince1970
 
   func send<T: Encodable>(o: T) {
     let s = String(data: try! JSONEncoder().encode(o), encoding: .utf8)!
@@ -26,6 +30,11 @@ func reconnect() {
     case .disconnected(let reason, let code):
       print("Disconnected: reason \(reason); code: \(code)")
       reconnect()
+    case .error(let err):
+      print("Error: \(String(describing: err))")
+      reconnect()
+    case .pong(_):
+      lastPong = Date().timeIntervalSince1970
     case .text(let string):
       struct MessageHeader: Codable {
         let type: String
@@ -69,10 +78,21 @@ func reconnect() {
     }
   }
 
+  print("Connecting!")
   socket.connect()
 }
 
 reconnect()
+
+DispatchQueue(label: "pingpong", qos: .userInitiated).async {
+  while true {
+    if Date().timeIntervalSince1970 - lastPong >= 5 {
+      reconnect()
+    }
+    socket.write(ping: Data())
+    Thread.sleep(forTimeInterval: 1)
+  }
+}
 
 while true {
   Thread.sleep(forTimeInterval: 10)
