@@ -55,7 +55,8 @@ button {
   border: 1px solid #ddd;
   box-shadow: 0 0 4px 0 #ddd;
   background: #eee;
-  height: 36px;
+  height: fit-content;
+  min-height: 36px;
   font-size: 1rem;
   transition: background 0.1s ease, color 0.1s ease;
   position: relative;
@@ -145,6 +146,7 @@ button[disabled="1"] {
   padding-right: 12px;
   height: 36px;
   text-align: right;
+  overflow: hidden;
 }
 .cen-element {
   width: 50%;
@@ -155,6 +157,7 @@ button[disabled="1"] {
   flex: 1 1 calc(25% - 12px);
   padding-left: 12px;
   height: 36px;
+  overflow: hidden;
 }
 
 .action-container {
@@ -213,6 +216,7 @@ button[disabled="1"] {
   height: 36px;
   line-height: 36px;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .prog-pend:before {

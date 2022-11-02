@@ -13,7 +13,11 @@ const reconnect = () => {
         { name: 'a2', type: 'action', disp: 'Action Two' },
         { name: 's1', type: 'slider', disp: 'Slider One', min: -10, max: 10, val: 3, step: 1 },
         { name: 's2', type: 'slider', disp: 'Slider Two', min: 0, max: 1, val: 0.4, step: 0.01 },
-        { name: 'a3', type: 'action', disp: '动作三' },
+        { name: 'a3', type: 'action', disp: '动作三 Lorem ipsum dolor sit amet' },
+        { name: 'a4', type: 'action', disp: '动作四 Lorem ipsum dolor sit amet' },
+        { name: 's3', type: 'slider', disp: 'Slider Three Lorem ipsum dolor sit amet', min: 0, max: 1, val: 0.4, step: 0.01 },
+        { name: 's4', type: 'slider', disp: 'Slider Four Lorem ipsum dolor sit amet', min: 0, max: 1, val: 0.4, step: 0.01 },
+        { name: 'a5', type: 'action', disp: 'Action Five Lorem ipsum dolor sit amet' },
       ]})
     } else if (o.type === 'act') {
       setTimeout(() => {
