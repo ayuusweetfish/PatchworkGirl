@@ -18,12 +18,19 @@ const adminBroadcast = (obj) => {
   for (const socket of Object.values(socketsAdmin)) socket.send(str)
 }
 
-let setCommandCount = 0
+const tryParseObject = (s) => {
+  try {
+    const o = JSON.parse(s)
+    if (typeof o !== 'object' || o === null) return {}
+    return o
+  } catch {
+    return {}
+  }
+}
 
-const serveReq = async (req) => {
+const serveReq = (req) => {
   if (req.headers.get('upgrade') === 'websocket') {
     const { socket, response } = Deno.upgradeWebSocket(req)
-    const path = (new URL(req.url)).pathname
     let clientId = crypto.randomUUID()
     const send = (o) => socket.send(JSON.stringify(o))
     let initialized = false
@@ -38,7 +45,7 @@ const serveReq = async (req) => {
       }, 5000)
     }
     socket.onmessage = (e) => {
-      const o = JSON.parse(e.data)
+      const o = tryParseObject(e.data)
       if (o.type === 'intro') {
         initialized = true
         if (o.auth === cfg.password) {
@@ -51,7 +58,7 @@ const serveReq = async (req) => {
             delete socketsAdmin[clientId]
           }
           socket.onmessage = (e) => {
-            const o = JSON.parse(e.data)
+            const o = tryParseObject(e.data)
             if (socketsAgent[o.id] === undefined) { return }
             const { socket } = socketsAgent[o.id]
             if (o.type === 'act') {
@@ -95,7 +102,7 @@ const serveReq = async (req) => {
           }
           socketsAgent[clientId] = { socket, disp, elements }
           socket.onmessage = (e) => {
-            const o = JSON.parse(e.data)
+            const o = tryParseObject(e.data)
             if (o.type === 'done') {
               adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
             } else if (o.type === 'upd') {
@@ -124,7 +131,7 @@ const handleConn = async (conn) => {
   for await (const evt of httpConn) {
     const req = evt.request
     try {
-      await evt.respondWith(await serveReq(req))
+      await evt.respondWith(serveReq(req))
     } catch (e) {
       log(`Error: ${e}`)
       try {
