@@ -1,14 +1,13 @@
-import { parse as parseYaml } from 'https://deno.land/std@0.160.0/encoding/yaml.ts'
-
 const log = (msg) => console.log(`${(new Date()).toISOString()} ${msg}`)
-
-const cfg = parseYaml(await Deno.readTextFile('config.yml'))
 
 const indexHtml = await Deno.readTextFile('index.html')
 
-const port = cfg.port || 1026
+const port = +Deno.env.get('PORT') || 1026
 const server = Deno.listen({ port })
 log(`Running at http://localhost:${port}/`)
+
+const password = Deno.env.get('PASS')
+console.assert(password, 'Please specify a password through the PASS environment variable')
 
 const socketsAdmin = {}
 const socketsAgent = {}
@@ -48,7 +47,7 @@ const serveReq = (req) => {
       const o = tryParseObject(e.data)
       if (o.type === 'intro') {
         initialized = true
-        if (o.auth === cfg.password) {
+        if (o.auth === password) {
           log(`Agent ${clientId} authorized as administrator`)
           socketsAdmin[clientId] = socket
           send({ type: 'auth', success: true })
