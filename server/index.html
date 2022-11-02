@@ -253,7 +253,11 @@ const inputAuth = document.getElementById('input-auth')
 const confirmAuth = document.getElementById('confirm-auth')
 
 let password
-for (const s of document.cookie.split(';')) if (s) {
+if (window.location.search !== '') {
+  password = window.location.search.substring(1)
+  window.history.replaceState(null, '', window.location.pathname)
+  document.cookie = 'password=; samesite=strict; max-age=0'
+} else for (const s of document.cookie.split(';')) if (s) {
   const i = s.indexOf('=')
   const key = decodeURIComponent(s.substring(0, i).trim())
   const value = decodeURIComponent(s.substring(i + 1))
