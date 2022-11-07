@@ -106,7 +106,7 @@ const serveReq = (req) => {
               adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
             } else if (o.type === 'upd') {
               elements[elementsIdx[o.key]].val = +o.val
-              adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts, key: o.key, val: +o.val })
+              adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts || '', key: o.key, val: +o.val })
             }
           }
           socket.onclose = (e) => {
