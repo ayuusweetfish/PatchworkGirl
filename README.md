@@ -2,7 +2,11 @@
 
 Patchwork Girl is a toolkit for the Wizard of Oz methodology, aiding the development of software prototypes for early-stage usability tests.
 
-The intended audience of this project are developers looking forward to building software prototypes for use in Wizard of Oz experiments, i.e. programs that need to be remote-controlled manually by human observers. It comprises a minimal protocol over WebSocket for real-time remote control, as well as a server-side application with a web interface. (*For the more experienced reader: think a simple RPC layer over WebSocket with a manual control panel.*)
+The intended audience of this project are developers looking forward to building software prototypes for use in Wizard of Oz experiments, i.e. programs that need to be remote-controlled manually by human observers. In short, any program can be ready for real-time manual remote control by processing simple JSON messages sent over WebSocket.
+
+The toolkit comprises a minimal WebSocket-based application-level protocol, as well as a server-side application providing a web interface. (*For the more experienced reader: think a simple RPC layer over WebSocket with a message relay server and a web control panel.*)
+
+![The participant uses the prototype, which is manually operated by human observers through a control panel. Boh programs connect with a server through WebSocket, transmitting control signals, action-complete messages, and value updates.](misc/illust.png)
 
 Implemented types of control:
 - Actions (button)
