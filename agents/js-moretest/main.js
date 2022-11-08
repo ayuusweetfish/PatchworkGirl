@@ -21,13 +21,13 @@ const reconnect = () => {
       ]})
     } else if (o.type === 'act') {
       setTimeout(() => {
-        send({ type: 'done', ts: o.ts, action: o.action })
-        if (o.action === 'a1')
-          send({ type: 'upd', ts: o.ts, key: 's2', val: Math.floor(Math.random() * 100) / 100 })
+        send({ type: 'done', ts: o.ts })
+        if (o.name === 'a1')
+          send({ type: 'upd', name: 's2', val: Math.floor(Math.random() * 100) / 100 })
       }, 1000)
     } else if (o.type === 'set') {
-      const val = (o.key === 's1' ? Math.round(o.val / 3) * 3 : o.val)
-      setTimeout(() => send({ type: 'upd', ts: o.ts, key: o.key, val }), 200)
+      const val = (o.name === 's1' ? Math.round(o.val / 3) * 3 : o.val)
+      setTimeout(() => send({ type: 'upd', ts: o.ts, val }), 200)
     }
   }
 }

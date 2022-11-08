@@ -2,7 +2,7 @@
 
 Patchwork Girl is a toolkit for the Wizard of Oz methodology, aiding the development of software prototypes for early-stage usability tests.
 
-The intended audience of this project are developers looking forward to building software prototypes for use in Wizard of Oz experiments, i.e. programs that need to be remote-controlled manually by human observants. It consists of a minimal protocol over WebSocket for real-time remote control, as well as a server-side application with a web interface. (*Think a simple RPC layer over WebSocket with a manual control panel.*)
+The intended audience of this project are developers looking forward to building software prototypes for use in Wizard of Oz experiments, i.e. programs that need to be remote-controlled manually by human observers. It comprises a minimal protocol over WebSocket for real-time remote control, as well as a server-side application with a web interface. (*For the more experienced reader: think a simple RPC layer over WebSocket with a manual control panel.*)
 
 Implemented types of control:
 - Actions (button)
@@ -15,7 +15,7 @@ The toolkit is language-agnostic. Programs being controlled (called the **agents
 
 ## Usage
 ### Server setup
-Pick one of the two options available -- the server is implemented with the [Deno](https://deno.land/) runtime and can be deployed to its own distributed cloud service or run on a self-hosted server on the Internet or inside a local network.
+Pick one of the two options available — the server is implemented with the [Deno](https://deno.land/) runtime and can be deployed to its own distributed cloud service or run on a self-hosted server on the Internet or inside a local network.
 
 #### Deno Deploy
 Create a project at [Deno Deploy](https://deno.com/deploy) and follow the instructions there.
@@ -89,28 +89,25 @@ A message is in text format and is always a JSON-encoded object. When the agent 
 - **type** is “**act**”: A signal requiring that a one-time action be carried out. The agent should execute the action and reply with a message indicating that the operation has completed.
   - Server’s message:
     - **ts** (string): A string identifying a timestamp, to be included in the reply.
-    - **action** (string): A control identifier, being one of the **name** attributes in the introduction message.
+    - **name** (string): A control identifier, being one of the **name** attributes in the introduction message.
   - Agent’s reply:
     - **type** (string): Should be “**done**”.
     - **ts** (string): The timestamp string from the server, unchanged.
-    - **action** (string): The control identifier from the server, unchanged.
 - **type** is “**set**”: A signal requiring that a value (numeric or textual) be changed. The agent should change the corresponding value and reply with a message indicating that the value has been updated.
   - Server’s message:
     - **ts** (string): A string identifying a timestamp, to be included in the reply.
-    - **key** (string): A control identifier, being one of the **name** attributes in the introduction message.
+    - **name** (string): A control identifier, being one of the **name** attributes in the introduction message.
     - **val** (string | number): The new value.
   - Agent’s reply:
     - **type** (string): Should be “**upd**”.
     - **ts** (string): The timestamp string from the server, unchanged.
-    - **key** (string): The control identifier from the server, unchanged.
-    - **val** (string): The updated value. In most cases this is the same as requested by the server.
+    - **val** (string): The updated value. In most cases this is the same as is requested by the server.
 
-The agent may also actively update its values, by sending a message in the same format as the reply to a “**set**” message, without a **ts** attribute.
+The agent may also actively update its values, by sending a message in the same format as the reply to a “**set**” message, replacing the **ts** attribute with a **name** (string) for the value.
 
 ## Roadmap
 
 - Textual values (input box).
-- No need for the control identifier in the agent’s reply?
 
 ## Miscellaneous
 The source code is distributed under the **Mulan Permissive Software License, Version 2** ([COPYING.MulanPSL.md](COPYING.MulanPSL.md)). Use case reports, issue reports, and suggestions would be much appreciated!

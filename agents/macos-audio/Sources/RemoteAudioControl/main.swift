@@ -63,7 +63,7 @@ func reconnect() {
       case "set":
         struct SetMessage: Codable {
           let ts: String
-          let key: String
+          let name: String
           let val: Float
         }
         let msg = try! JSONDecoder().decode(SetMessage.self, from: string.data(using: .utf8)!)
@@ -71,11 +71,11 @@ func reconnect() {
         case "vol":
           try! output.setVolume(msg.val)
           let newval = try! output.readVolume()
-          send(string: #"{ "type": "upd", "ts": "\#(msg.ts)", "key": "\#(msg.key)", "val": \#(newval) }"#)
+          send(string: #"{ "type": "upd", "ts": "\#(msg.ts)", "val": \#(newval) }"#)
         case "bal":
           try! output.setBalance(msg.val)
           let newval = try! output.readBalance()
-          send(string: #"{ "type": "upd", "ts": "\#(msg.ts)", "key": "\#(msg.key)", "val": \#(newval) }"#)
+          send(string: #"{ "type": "upd", "ts": "\#(msg.ts)", "val": \#(newval) }"#)
         default:
           break
         }

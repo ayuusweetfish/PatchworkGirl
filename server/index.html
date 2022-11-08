@@ -279,6 +279,12 @@ let socket
 
 const send = (o) => socket.send(JSON.stringify(o))
 
+const lockStep = (min, max, step, val) =>
+  +(isFinite(step) ?
+    (min + Math.round((val - min) / step) * step) :
+    +val
+  ).toFixed(5)
+
 const createAgent = ({ id, disp, elements }) => {
   const agentDiv = templ.cloneNode(true)
   agentDiv.id = 'agent-div-' + id
@@ -302,103 +308,104 @@ const createAgent = ({ id, disp, elements }) => {
 
   for (const el of elements) {
     if (el.type === 'action') {
-      const { name: action, disp } = el
+      const { name, disp } = el
       const actionDiv = templAction.cloneNode(true)
       actionDiv.removeAttribute('id')
       actionDiv.style.removeProperty('display')
       agentDiv.appendChild(actionDiv)
-      actionBtn[action] = actionDiv.querySelector('.action-btn')
-      actionProg[action] = actionDiv.querySelector('.action-prog')
-      actionBtn[action].innerText = disp
-      actionBtn[action].addEventListener('click', (e) => {
+      actionBtn[name] = actionDiv.querySelector('.action-btn')
+      actionProg[name] = actionDiv.querySelector('.action-prog')
+      actionBtn[name].innerText = disp
+      actionBtn[name].addEventListener('click', (e) => {
         const ts = Date.now().toString()
-        send({ type: 'act', id, ts, action })
-        actionMaxTs[action] = ts
-        actionProg[action].classList.remove('prog-done')
-        actionProg[action].classList.add('prog-pend')
+        send({ type: 'act', id, ts, name })
+        actionMaxTs[name] = ts
+        actionProg[name].classList.remove('prog-done')
+        actionProg[name].classList.add('prog-pend')
       })
     } else if (el.type === 'slider') {
-      const { name: key, disp, min, max, step, val } = el
+      const { name, disp, min, max, step, val } = el
       const sliderDiv = templSlider.cloneNode(true)
       sliderDiv.removeAttribute('id')
       sliderDiv.style.removeProperty('display')
       agentDiv.appendChild(sliderDiv)
-      sliderInput[key] = sliderDiv.querySelector('.slider-input')
-      sliderDisp[key] = sliderDiv.querySelector('.slider-val')
-      sliderProg[key] = sliderDiv.querySelector('.slider-prog')
-      sliderInput[key].setAttribute('min', min)
-      sliderInput[key].setAttribute('max', max)
-      sliderInput[key].setAttribute('step', step)
+      sliderInput[name] = sliderDiv.querySelector('.slider-input')
+      sliderDisp[name] = sliderDiv.querySelector('.slider-val')
+      sliderProg[name] = sliderDiv.querySelector('.slider-prog')
+      sliderInput[name].setAttribute('min', min)
+      sliderInput[name].setAttribute('max', max)
+      sliderInput[name].setAttribute('step', step)
       const sliderName = sliderDiv.querySelector('.slider-name')
       sliderName.innerText = disp
-      sliderInput[key].value = val
-      sliderAdjustedVal[key] = +(min + Math.round((val - min) / step) * step).toPrecision(5)
-      sliderDisp[key].innerText = sliderAdjustedVal[key].toString()
+      sliderInput[name].value = val
+      sliderAdjustedVal[name] = lockStep(min, max, step, val)
+      sliderDisp[name].innerText = sliderAdjustedVal[name].toString()
       let timer
-      sliderPointerHeld[key] = false
-      sliderDisableSend[key] = false
-      sliderInput[key].addEventListener('input', () => {
-        if (sliderDisableSend[key]) return
-        const val = sliderInput[key].value
-        sliderDisp[key].innerText = val.toString()
-        sliderAdjustedVal[key] = val
+      sliderPointerHeld[name] = false
+      sliderDisableSend[name] = false
+      sliderInput[name].addEventListener('input', () => {
+        if (sliderDisableSend[name]) return
+        const val = lockStep(min, max, step, sliderInput[name].value)
+        sliderDisp[name].innerText = val.toString()
+        sliderAdjustedVal[name] = val
         if (timer !== undefined) clearTimeout(timer)
         timer = setTimeout(() => {
           timer = undefined
           const ts = Date.now().toString()
-          send({ type: 'set', id, ts, key, val })
-          sliderMaxTs[key] = ts
-          sliderProg[key].classList.remove('prog-done')
-          sliderProg[key].classList.add('prog-pend')
+          send({ type: 'set', id, ts, name, val })
+          sliderMaxTs[name] = ts
+          sliderProg[name].classList.remove('prog-done')
+          sliderProg[name].classList.add('prog-pend')
         }, 200)
       })
-      sliderInput[key].addEventListener('mousedown', () => {
-        sliderPointerHeld[key] = true
+      sliderInput[name].addEventListener('mousedown', () => {
+        sliderPointerHeld[name] = true
       })
-      sliderInput[key].addEventListener('mouseup', () => {
-        sliderPointerHeld[key] = false
+      sliderInput[name].addEventListener('mouseup', () => {
+        sliderPointerHeld[name] = false
         setTimeout(() => {
-          sliderDisableSend[key] = true
-          sliderInput[key].value = sliderAdjustedVal[key]
-          sliderDisableSend[key] = false
+          sliderDisableSend[name] = true
+          sliderInput[name].value = sliderAdjustedVal[name]
+          sliderDisableSend[name] = false
         }, 100)
       })
     }
   }
 
   let actionDoneTimer = {}
-  const done = (ts, action) => {
-    if (ts === actionMaxTs[action]) {
-      actionProg[action].classList.remove('prog-pend')
-      actionProg[action].classList.add('prog-done')
-      if (actionDoneTimer[action] !== undefined)
-        clearTimeout(actionDoneTimer[action])
-      actionDoneTimer[action] = setTimeout(() => {
-        actionDoneTimer[action] = undefined
-        actionProg[action].classList.remove('prog-done')
+  const done = (ts, name) => {
+    if (ts === actionMaxTs[name]) {
+      actionProg[name].classList.remove('prog-pend')
+      actionProg[name].classList.add('prog-done')
+      if (actionDoneTimer[name] !== undefined)
+        clearTimeout(actionDoneTimer[name])
+      actionDoneTimer[name] = setTimeout(() => {
+        actionDoneTimer[name] = undefined
+        actionProg[name].classList.remove('prog-done')
       }, 2000)
     }
   }
 
   let sliderDoneTimer = {}
-  const update = (ts, key, val) => {
-    const min = +sliderInput[key].getAttribute('min')
-    const step = +sliderInput[key].getAttribute('step')
-    sliderAdjustedVal[key] = +(min + Math.round((val - min) / step) * step).toPrecision(5)
-    sliderDisp[key].innerText = sliderAdjustedVal[key].toString()
-    if (!sliderPointerHeld[key]) {
-      sliderDisableSend[key] = true
-      sliderInput[key].value = sliderAdjustedVal[key]
-      sliderDisableSend[key] = false
+  const update = (ts, name, val) => {
+    const min = +sliderInput[name].getAttribute('min')
+    const max = +sliderInput[name].getAttribute('max')
+    const step = +sliderInput[name].getAttribute('step')
+    sliderAdjustedVal[name] = lockStep(min, max, step, val)
+    sliderDisp[name].innerText = sliderAdjustedVal[name].toString()
+    if (!sliderPointerHeld[name]) {
+      sliderDisableSend[name] = true
+      sliderInput[name].value = sliderAdjustedVal[name]
+      sliderDisableSend[name] = false
     }
-    if (ts === sliderMaxTs[key]) {
-      sliderProg[key].classList.remove('prog-pend')
-      sliderProg[key].classList.add('prog-done')
-      if (sliderDoneTimer[key] !== undefined)
-        clearTimeout(sliderDoneTimer[key])
-      sliderDoneTimer[key] = setTimeout(() => {
-        sliderDoneTimer[key] = undefined
-        sliderProg[key].classList.remove('prog-done')
+    if (ts === sliderMaxTs[name]) {
+      sliderProg[name].classList.remove('prog-pend')
+      sliderProg[name].classList.add('prog-done')
+      if (sliderDoneTimer[name] !== undefined)
+        clearTimeout(sliderDoneTimer[name])
+      sliderDoneTimer[name] = setTimeout(() => {
+        sliderDoneTimer[name] = undefined
+        sliderProg[name].classList.remove('prog-done')
       }, 2000)
     }
   }
@@ -456,9 +463,9 @@ const reconnect = () => {
       agents[o.id].destroy()
       delete agents[o.id]
     } else if (o.type === 'agent-done') {
-      agents[o.id].done(o.ts, o.action)
+      agents[o.id].done(o.ts, o.name)
     } else if (o.type === 'agent-upd') {
-      agents[o.id].update(o.ts, o.key, o.val)
+      agents[o.id].update(o.ts, o.name, o.val)
     }
   }
 }

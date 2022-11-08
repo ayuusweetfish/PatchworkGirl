@@ -60,10 +60,12 @@ const serveReq = (req) => {
             const o = tryParseObject(e.data)
             if (socketsAgent[o.id] === undefined) { return }
             const { socket } = socketsAgent[o.id]
+            // XXX: Remember rather than include the name in the timestamp?
+            const ts = o.ts + '/' + o.name
             if (o.type === 'act') {
-              socket.send(JSON.stringify({ type: 'act', ts: o.ts, action: o.action }))
+              socket.send(JSON.stringify({ type: 'act', ts, name: o.name }))
             } else if (o.type === 'set') {
-              socket.send(JSON.stringify({ type: 'set', ts: o.ts, key: o.key, val: +o.val }))
+              socket.send(JSON.stringify({ type: 'set', ts, name: o.name, val: +o.val }))
             }
           }
         } else if (o.auth !== undefined) {
@@ -89,7 +91,7 @@ const serveReq = (req) => {
               previousSocket.onclose = () => {}
               previousSocket.close()
               for (const el of elements) if (el.type === 'slider') {
-                adminBroadcast({ type: 'agent-upd', id: o.id, ts: '', key: el.name, val: +el.val })
+                adminBroadcast({ type: 'agent-upd', id: o.id, ts: '', name: el.name, val: +el.val })
               }
               replaced = true
             }
@@ -102,11 +104,21 @@ const serveReq = (req) => {
           socketsAgent[clientId] = { socket, disp, elements }
           socket.onmessage = (e) => {
             const o = tryParseObject(e.data)
+            let ts, name
+            if (o.ts) {
+              const p = o.ts.indexOf('/')
+              ts = o.ts.substring(0, p)
+              name = o.ts.substring(p + 1)
+            } else {
+              ts = ''
+              name = o.name
+            }
+            if (elementsIdx[name] === undefined) return
             if (o.type === 'done') {
-              adminBroadcast({ type: 'agent-done', id: clientId, ts: o.ts, action: o.action })
+              adminBroadcast({ type: 'agent-done', id: clientId, ts, name})
             } else if (o.type === 'upd') {
-              elements[elementsIdx[o.key]].val = +o.val
-              adminBroadcast({ type: 'agent-upd', id: clientId, ts: o.ts || '', key: o.key, val: +o.val })
+              elements[elementsIdx[name]].val = +o.val
+              adminBroadcast({ type: 'agent-upd', id: clientId, ts, name, val: +o.val })
             }
           }
           socket.onclose = (e) => {
